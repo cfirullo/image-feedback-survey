@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Feedback System - Multi-Participant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .participant-info {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            margin: 0;
+            text-align: center;
+            font-weight: 500;
+            border-bottom: 3px solid #4caf50;
+        }
+        
+        .admin-section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+            background: #f8f9fa;
+        }
+        
+        .admin-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .participant-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .participant-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .participant-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .upload-area {
+            border: 3px dashed #4facfe;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            background: #f0f8ff;
+            border-color: #00f2fe;
+        }
+        
+        .upload-area.dragover {
+            background: #e6f3ff;
+            border-color: #00f2fe;
+            transform: scale(1.02);
+        }
+        
+        .upload-area.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: #4facfe;
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        
+        .question-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .question-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .question-tab {
+            padding: 10px 20px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .question-tab.active {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .viewer-section {
+            padding: 30px;
+        }
+        
+        .question-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .question-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+        
+        .current-question-display {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #4facfe;
+        }
+        
+        .current-question-display h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .url-examples {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .images-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .image-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .image-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .image-card.clicked {
+            border: 3px solid #4facfe;
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.4);
+        }
+        
+        .image-container {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .image-card:hover img {
+            transform: scale(1.05);
+        }
+        
+        .image-info {
+            padding: 15px;
+        }
+        
+        .image-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 0.9rem;
+        }
+        
+        .click-count {
+            color: #4facfe;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        
+        .results-section {
+            margin-top: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        
+        .results-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .results-data {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #4facfe;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4facfe;
+        }
+        
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: none;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .toggle-section {
+            margin: 10px 0;
+        }
+        
+        .toggle-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        .random-info {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .deployment-guide {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .participant-list {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .participant-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .participant-item:hover {
+            background: #f0f8ff;
+        }
+        
+        .participant-item.active {
+            background: #e3f2fd;
+            font-weight: 600;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @media (max-width: 768px) {
+            .images-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .question-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Multi-Participant Image Feedback System</h1>
+            <p>Each participant has their own unique image pool and data</p>
+        </div>
+        
+        <div class="participant-info" id="participantInfo">
+            Current Participant: <span id="currentParticipantDisplay">No participant selected</span>
+        </div>
+        
+        <!-- Admin Section -->
+        <div class="admin-section">
+            <div class="admin-title">
+                ⚙️ Administrator Panel
+                <button class="toggle-btn" onclick="toggleAdminSection()">Hide/Show</button>
+            </div>
+            
+            <div id="adminContent">
+                <div class="participant-selector">
+                    <h4>👤 Participant Management</h4>
+                    <input type="text" 
+                           class="participant-input" 
+                           id="participantIdInput" 
+                           placeholder="Enter Participant ID (e.g., P001, USER123, etc.)"
+                           value="">
+                    <button class="btn" onclick="selectParticipant()">🔄 Switch to Participant</button>
+                    <button class="btn btn-secondary" onclick="createNewParticipant()">➕ Create New Participant</button>
+                    
+                    <div class="participant-list" id="participantList"></div>
+                </div>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h3 id="uploadTitle">Select a participant first to upload images</h3>
+                    <p id="uploadDesc">Each participant will have their own unique set of 20 randomly selected images per question</p>
+                    <p>Supports JPG, PNG, GIF (max 5MB per file)</p>
+                    <input type="file" id="fileInput" class="file-input" multiple accept="image/*" disabled>
+                    <br><br>
+                    <button class="btn" id="uploadBtn" onclick="handleUploadClick()" disabled>
+                        📤 Select Images
+                    </button>
+                </div>
+                
+                <div class="question-selector">
+                    <h4>🔧 Global Question Configuration</h4>
+                    <p style="margin-bottom: 15px; color: #666;">These questions apply to ALL participants</p>
+                    <div class="question-tabs" id="questionTabs"></div>
+                    <input type="text" 
+                           class="question-input" 
+                           id="questionInput" 
+                           placeholder="Enter question text">
+                    <button class="btn" onclick="saveGlobalQuestion()">💾 Save Question (All Participants)</button>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn btn-danger" onclick="clearParticipantData()" id="clearBtn" disabled>🗑️ Clear Participant Data</button>
+                    <button class="btn" onclick="exportData()" id="exportBtn" disabled>💾 Export Data</button>
+                    <button class="btn btn-secondary" onclick="regenerateRandomImages()" id="randomBtn" disabled>🎲 New Random Selection</button>
+                </div>
+                
+                <div class="status-message" id="statusMessage"></div>
+                <div class="random-info">
+                    <strong>ℹ️ Current Participant Info:</strong><br>
+                    Participant ID: <span id="currentParticipantId">None selected</span><br>
+                    Total images: <span id="totalPoolImages">0</span><br>
+                    Each question displays 20 randomly selected images.
+                </div>
+                
+                <div class="deployment-guide">
+                    <h4>🚀 Qualtrics Integration URLs</h4>
+                    <div class="url-examples" id="urlExamples">
+                        Select a participant to see their specific URLs...
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Viewer Section -->
+        <div class="viewer-section">
+            <div class="current-question-display">
+                <h3>Current Question:</h3>
+                <div id="currentQuestionText">No participant or question selected</div>
+                <div style="margin-top: 10px;">
+                    <strong>Current URL:</strong> <code id="currentURL">Select participant first</code>
+                    <button class="btn" onclick="copyURL()" style="margin-left: 10px; padding: 5px 15px; font-size: 0.9rem;" id="copyBtn" disabled>📋 Copy URL</button>
+                </div>
+            </div>
+            
+            <div id="imagesGrid" class="images-grid"></div>
+            
+            <div class="results-section">
+                <h3 class="results-title">📈 Results for Current Participant & Question</h3>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalClicks">0</div>
+                        <div class="stat-label">Total Clicks</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="displayedImages">0</div>
+                        <div class="stat-label">Images Shown</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="mostPopular">-</div>
+                        <div class="stat-label">Most Popular</div>
+                    </div>
+                </div>
+                
+                <div class="toggle-section">
+                    <button class="toggle-btn" onclick="toggleResults()">Show/Hide Detailed Data</button>
+                </div>
+                
+                <div id="resultsData" class="results-data" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global application state
+        let appData = {
+            participants: {}, // Each participant has their own data structure
+            currentParticipant: null,
+            currentQuestion: 1,
+            globalQuestions: {
+                1: "Which of these images strikes you the most?",
+                2: "Which of these images would you like to click on?",
+                3: "Which image best represents your interest?",
+                4: "Which of these images do you prefer?",
+                5: "Which image best captures your attention?"
+            }
+        };
+
+        // Default question structure for new participants
+        function getDefaultQuestions() {
+            return {
+                1: { selectedImages: [], clicks: {} },
+                2: { selectedImages: [], clicks: {} },
+                3: { selectedImages: [], clicks: {} },
+                4: { selectedImages: [], clicks: {} },
+                5: { selectedImages: [], clicks: {} }
+            };
+        }
+
+        // Function to randomize array (Fisher-Yates shuffle)
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Create new participant data structure
+        function createParticipantData(participantId) {
+            return {
+                id: participantId,
+                allImages: [],
+                questions: getDefaultQuestions(),
+                createdAt: new Date().toISOString()
+            };
+        }
+
+        // Select 20 random images for each question for current participant
+        function selectRandomImagesForAllQuestions() {
+            if (!appData.currentParticipant || !appData.participants[appData.currentParticipant]) return;
+            
+            const participant = appData.participants[appData.currentParticipant];
+            if (participant.allImages.length === 0) return;
+            
+            Object.keys(participant.questions).forEach(questionNum => {
+                const shuffled = shuffleArray(participant.allImages);
+                participant.questions[questionNum].selectedImages = shuffled.slice(0, Math.min(20, participant.allImages.length));
+                
+                // Initialize clicks for newly selected images
+                participant.questions[questionNum].selectedImages.forEach(img => {
+                    if (!participant.questions[questionNum].clicks[img.id]) {
+                        participant.questions[questionNum].clicks[img.id] = 0;
+                    }
+                });
+            });
+        }
+
+        // Load saved data
+        function loadData() {
+            const saved = localStorage.getItem('multiParticipantFeedbackData');
+            if (saved) {
+                appData = { ...appData, ...JSON.parse(saved) };
+            }
+            
+            // Get participant and question from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const participantParam = urlParams.get('participant');
+            const questionParam = urlParams.get('question');
+            
+            if (participantParam) {
+                // Create participant if doesn't exist
+                if (!appData.participants[participantParam]) {
+                    appData.participants[participantParam] = createParticipantData(participantParam);
+                }
+                appData.currentParticipant = participantParam;
+                document.getElementById('participantIdInput').value = participantParam;
+            }
+            
+            if (questionParam && questionParam >= 1 && questionParam <= 5) {
+                appData.currentQuestion = parseInt(questionParam);
+            }
+            
+            updateUI();
+        }
+
+        // Save data
+        function saveData() {
+            localStorage.setItem('multiParticipantFeedbackData', JSON.stringify(appData));
+        }
+
+        // Update entire UI
+        function updateUI() {
+            renderParticipantList();
+            renderQuestionTabs();
+            renderCurrentQuestion();
+            renderImages();
+            updateStats();
+            updateParticipantInfo();
+            updateURLExamples();
+            updateButtonStates();
+        }
+
+        // Update button states based on participant selection
+        function updateButtonStates() {
+            const hasParticipant = appData.currentParticipant !== null;
+            
+            document.getElementById('fileInput').disabled = !hasParticipant;
+            document.getElementById('uploadBtn').disabled = !hasParticipant;
+            document.getElementById('clearBtn').disabled = !hasParticipant;
+            document.getElementById('exportBtn').disabled = !hasParticipant;
+            document.getElementById('randomBtn').disabled = !hasParticipant;
+            document.getElementById('copyBtn').disabled = !hasParticipant;
+            
+            const uploadArea = document.getElementById('uploadArea');
+            if (hasParticipant) {
+                uploadArea.classList.remove('disabled');
+                document.getElementById('uploadTitle').textContent = `Upload images for ${appData.currentParticipant}`;
+                document.getElementById('uploadDesc').textContent = `Images will be randomly assigned to this participant's questions`;
+            } else {
+                uploadArea.classList.add('disabled');
+                document.getElementById('uploadTitle').textContent = "Select a participant first to upload images";
+                document.getElementById('uploadDesc').textContent = "Each participant will have their own unique set of images";
+            }
+        }
+
+        // Render participant list
+        function renderParticipantList() {
+            const listContainer = document.getElementById('participantList');
+            listContainer.innerHTML = '';
+            
+            if (Object.keys(appData.participants).length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #666;">No participants created yet</p>';
+                return;
+            }
+            
+            Object.keys(appData.participants).forEach(participantId => {
+                const item = document.createElement('div');
+                item.className = `participant-item ${participantId === appData.currentParticipant ? 'active' : ''}`;
+                item.onclick = () => switchToParticipant(participantId);
+                
+                const participant = appData.participants[participantId];
+                item.innerHTML = `
+                    <span>${participantId}</span>
+                    <span style="font-size: 0.9rem; color: #666;">${participant.allImages.length} images</span>
+                `;
+                
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Switch to participant
+        function switchToParticipant(participantId) {
+            appData.currentParticipant = participantId;
+            document.getElementById('participantIdInput').value = participantId;
+            updateUI();
+            saveData();
+            
+            // Update URL without reload
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('participant', participantId);
+            newUrl.searchParams.set('question', appData.currentQuestion);
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Select participant from input
+        function selectParticipant() {
+            const participantId = document.getElementById('participantIdInput').value.trim();
+            if (!participantId) {
+                showMessage('Please enter a participant ID', 'error');
+                return;
+            }
+            
+            // Create participant if doesn't exist
+            if (!appData.participants[participantId]) {
+                appData.participants[participantId] = createParticipantData(participantId);
+                showMessage(`New participant ${participantId} created!`, 'success');
+            }
+            
+            switchToParticipant(participantId);
+        }
+
+        // Create new participant with auto-generated ID
+        function createNewParticipant() {
+            const timestamp = Date.now().toString().slice(-6);
+            const participantId = `P${timestamp}`;
+            
+            appData.participants[participantId] = createParticipantData(participantId);
+            document.getElementById('participantIdInput').value = participantId;
+            switchToParticipant(participantId);
+            showMessage(`New participant ${participantId} created!`, 'success');
+        }
+
+        // Update participant info display
+        function updateParticipantInfo() {
+            const currentDisplay = document.getElementById('currentParticipantDisplay');
+            const currentIdDisplay = document.getElementById('currentParticipantId');
+            const totalImagesDisplay = document.getElementById('totalPoolImages');
+            
+            if (appData.currentParticipant) {
+                const participant = appData.participants[appData.currentParticipant];
+                currentDisplay.textContent = appData.currentParticipant;
+                currentIdDisplay.textContent = appData.currentParticipant;
+                totalImagesDisplay.textContent = participant.allImages.length;
+            } else {
+                currentDisplay.textContent = 'No participant selected';
+                currentIdDisplay.textContent = 'None selected';
+                totalImagesDisplay.textContent = '0';
+            }
+        }
+
+        // Update URL examples
+        function updateURLExamples() {
+            const examplesDiv = document.getElementById('urlExamples');
+            if (!appData.currentParticipant) {
+                examplesDiv.textContent = 'Select a participant to see their specific URLs...';
+                return;
+            }
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const participantId = appData.currentParticipant;
+            
+            examplesDiv.innerHTML = `
+<strong>URLs for participant ${participantId}:</strong>
+Question 1: ${baseUrl}?participant=${participantId}&question=1
+Question 2: ${baseUrl}?participant=${participantId}&question=2
+Question 3: ${baseUrl}?participant=${participantId}&question=3
+Question 4: ${baseUrl}?participant=${participantId}&question=4
+Question 5: ${baseUrl}?participant=${participantId}&question=5
+
+<strong>Use these URLs in your Qualtrics survey for this participant.</strong>
+            `;
+        }
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        function handleUploadClick() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            fileInput.click();
+        }
+
+        uploadArea.addEventListener('click', handleUploadClick);
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            if (appData.currentParticipant) {
+                uploadArea.classList.add('dragover');
+            }
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (appData.currentParticipant) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const imageData = {
+                            id: Date.now() + Math.random(),
+                            name: file.name,
+                            data: e.target.result,
+                            uploadTime: new Date().toISOString()
+                        };
+                        
+                        participant.allImages.push(imageData);
+                        selectRandomImagesForAllQuestions();
+                        
+                        saveData();
+                        updateUI();
+                        showMessage(`Image ${file.name} uploaded for ${appData.currentParticipant}!`, 'success');
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    showMessage('Invalid file or too large (max 5MB)', 'error');
+                }
+            });
+        }
+
+        // Render question tabs
+        function renderQuestionTabs() {
+            const tabsContainer = document.getElementById('questionTabs');
+            tabsContainer.innerHTML = '';
+            
+            [1, 2, 3, 4, 5].forEach(questionNum => {
+                const tab = document.createElement('button');
+                tab.className = `question-tab ${questionNum == appData.currentQuestion ? 'active' : ''}`;
+                tab.textContent = `Question ${questionNum}`;
+                tab.onclick = () => selectQuestion(questionNum);
+                tabsContainer.appendChild(tab);
+            });
+        }
+
+        // Select current question
+        function selectQuestion(questionNum) {
+            appData.currentQuestion = parseInt(questionNum);
+            updateUI();
+            
+            // Update URL without reload
+            if (appData.currentParticipant) {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('participant', appData.currentParticipant);
+                newUrl.searchParams.set('question', questionNum);
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+
+        // Render current question
+        function renderCurrentQuestion() {
+            const currentURLDisplay = document.getElementById('currentURL');
+            const questionTextDisplay = document.getElementById('currentQuestionText');
+            const questionInput = document.getElementById('questionInput');
+            
+            // Always show global question text
+            const questionText = appData.globalQuestions[appData.currentQuestion];
+            questionTextDisplay.textContent = questionText;
+            questionInput.value = questionText;
+            
+            if (!appData.currentParticipant) {
+                currentURLDisplay.textContent = 'Select participant first';
+                return;
+            }
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            currentURLDisplay.textContent = `${baseUrl}?participant=${appData.currentParticipant}&question=${appData.currentQuestion}`;
+        }
+
+        // Save global question (applies to all participants)
+        function saveGlobalQuestion() {
+            const newText = document.getElementById('questionInput').value;
+            appData.globalQuestions[appData.currentQuestion] = newText;
+            
+            renderCurrentQuestion();
+            saveData();
+            showMessage('Global question saved for all participants!', 'success');
+        }
+
+        // Render images for current question
+        function renderImages() {
+            const grid = document.getElementById('imagesGrid');
+            grid.innerHTML = '';
+            
+            if (!appData.currentParticipant) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; font-size: 1.2rem;">Select a participant to view their images</p>';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
+            
+            if (currentQ.selectedImages.length === 0) {
+                grid.innerHTML = `<p style="text-align: center; color: #666; font-size: 1.2rem;">Upload images for participant ${appData.currentParticipant} to get started</p>`;
+                return;
+            }
+            
+            currentQ.selectedImages.forEach(image => {
+                const card = document.createElement('div');
+                card.className = 'image-card fade-in';
+                card.onclick = () => recordClick(image.id);
+                
+                card.innerHTML = `
+                    <div class="image-container">
+                        <img src="${image.data}" alt="${image.name}">
+                    </div>
+                    <div class="image-info">
+                        <div class="image-name">${image.name}</div>
+                        <div class="click-count">Clicks: ${currentQ.clicks[image.id] || 0}</div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // Record click
+        function recordClick(imageId) {
+            if (!appData.currentParticipant) return;
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
+            currentQ.clicks[imageId] = (currentQ.clicks[imageId] || 0) + 1;
+            
+            // Visual effect
+            const cards = document.querySelectorAll('.image-card');
+            cards.forEach(card => {
+                const img = card.querySelector('img');
+                const clickedImage = currentQ.selectedImages.find(i => i.id === imageId);
+                if (img && clickedImage && img.src === clickedImage.data) {
+                    card.classList.add('clicked');
+                    setTimeout(() => card.classList.remove('clicked'), 1000);
+                }
+            });
+            
+            saveData();
+            renderImages();
+            updateStats();
+            updateResults();
+            
+            // Send data to Qualtrics
+            sendToQualtrics(imageId);
+        }
+
+        // Update statistics
+        function updateStats() {
+            if (!appData.currentParticipant) {
+                document.getElementById('totalClicks').textContent = '0';
+                document.getElementById('displayedImages').textContent = '0';
+                document.getElementById('mostPopular').textContent = '-';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
+            const totalClicks = Object.values(currentQ.clicks).reduce((sum, count) => sum + count, 0);
+            const displayedImages = currentQ.selectedImages.length;
+            
+            let mostPopular = '-';
+            if (displayedImages > 0 && totalClicks > 0) {
+                const maxClicks = Math.max(...Object.values(currentQ.clicks));
+                const popularId = Object.keys(currentQ.clicks).find(id => currentQ.clicks[id] === maxClicks);
+                const popularImage = currentQ.selectedImages.find(img => img.id == popularId);
+                mostPopular = popularImage ? popularImage.name.substring(0, 12) + '...' : '-';
+            }
+            
+            document.getElementById('totalClicks').textContent = totalClicks;
+            document.getElementById('displayedImages').textContent = displayedImages;
+            document.getElementById('mostPopular').textContent = mostPopular;
+        }
+
+        // Update detailed results
+        function updateResults() {
+            if (!appData.currentParticipant) {
+                document.getElementById('resultsData').textContent = 'No participant selected';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
+            const results = {
+                participantId: appData.currentParticipant,
+                question: appData.globalQuestions[appData.currentQuestion],
+                questionNumber: appData.currentQuestion,
+                timestamp: new Date().toISOString(),
+                totalClicks: Object.values(currentQ.clicks).reduce((sum, count) => sum + count, 0),
+                results: currentQ.selectedImages.map(img => ({
+                    imageId: img.id,
+                    imageName: img.name,
+                    clicks: currentQ.clicks[img.id] || 0,
+                    percentage: Object.values(currentQ.clicks).reduce((sum, count) => sum + count, 0) > 0 ? 
+                        (((currentQ.clicks[img.id] || 0) / Object.values(currentQ.clicks).reduce((sum, count) => sum + count, 0)) * 100).toFixed(1) + '%' : '0%'
+                }))
+            };
+            
+            document.getElementById('resultsData').textContent = JSON.stringify(results, null, 2);
+        }
+
+        // Utility functions
+        function showMessage(text, type) {
+            const message = document.getElementById('statusMessage');
+            message.textContent = text;
+            message.className = `status-message status-${type}`;
+            message.style.display = 'block';
+            setTimeout(() => message.style.display = 'none', 3000);
+        }
+
+        function clearParticipantData() {
+            if (!appData.currentParticipant) {
+                showMessage('No participant selected', 'error');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to clear all data for participant ${appData.currentParticipant}?`)) {
+                delete appData.participants[appData.currentParticipant];
+                appData.currentParticipant = null;
+                document.getElementById('participantIdInput').value = '';
+                
+                saveData();
+                updateUI();
+                showMessage('Participant data cleared', 'success');
+            }
+        }
+
+        function regenerateRandomImages() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            if (participant.allImages.length === 0) {
+                showMessage('Upload some images for this participant first', 'error');
+                return;
+            }
+            
+            selectRandomImagesForAllQuestions();
+            renderImages();
+            updateStats();
+            saveData();
+            showMessage(`New random selection generated for ${appData.currentParticipant}!`, 'success');
+        }
+
+        function exportData() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const exportData = {
+                participantId: appData.currentParticipant,
+                participantData: participant,
+                exportTime: new Date().toISOString(),
+                summary: {
+                    totalImages: participant.allImages.length,
+                    totalQuestions: Object.keys(participant.questions).length,
+                    totalClicksAllQuestions: Object.values(participant.questions).reduce((total, q) => 
+                        total + Object.values(q.clicks).reduce((sum, count) => sum + count, 0), 0)
+                }
+            };
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `participant-${appData.currentParticipant}-feedback-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function copyURL() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const url = `${baseUrl}?participant=${appData.currentParticipant}&question=${appData.currentQuestion}`;
+            
+            navigator.clipboard.writeText(url).then(() => {
+                showMessage('URL copied to clipboard!', 'success');
+            });
+        }
+
+        function toggleAdminSection() {
+            const content = document.getElementById('adminContent');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleResults() {
+            const results = document.getElementById('resultsData');
+            if (results.style.display === 'none') {
+                updateResults();
+                results.style.display = 'block';
+            } else {
+                results.style.display = 'none';
+            }
+        }
+
+        // Qualtrics integration
+        function sendToQualtrics(imageId) {
+            if (!appData.currentParticipant) return;
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
+            const image = currentQ.selectedImages.find(img => img.id === imageId);
+            
+            if (image && window.parent && window.parent.postMessage) {
+                window.parent.postMessage({
+                    type: 'imageClick',
+                    data: {
+                        participantId: appData.currentParticipant,
+                        questionNumber: appData.currentQuestion,
+                        questionText: appData.globalQuestions[appData.currentQuestion],
+                        imageId: imageId,
+                        imageName: image.name,
+                        timestamp: new Date().toISOString(),
+                        clickCount: currentQ.clicks[imageId]
+                    }
+                }, '*');
+            }
+        }
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            updateResults();
+        });
+    </script>
+</body>
+</html>
