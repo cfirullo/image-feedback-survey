@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Feedback System - Multi-Question</title>
+    <title>Image Feedback System - Multi-Participant</title>
     <style>
         * {
             margin: 0;
@@ -45,6 +45,16 @@
             opacity: 0.9;
         }
         
+        .participant-info {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 15px;
+            margin: 0;
+            text-align: center;
+            font-weight: 500;
+            border-bottom: 3px solid #4caf50;
+        }
+        
         .admin-section {
             padding: 30px;
             border-bottom: 1px solid #eee;
@@ -58,6 +68,29 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+        
+        .participant-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .participant-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .participant-input:focus {
+            outline: none;
+            border-color: #4facfe;
         }
         
         .upload-area {
@@ -79,6 +112,12 @@
             background: #e6f3ff;
             border-color: #00f2fe;
             transform: scale(1.02);
+        }
+        
+        .upload-area.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f5f5f5;
         }
         
         .upload-icon {
@@ -109,6 +148,13 @@
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
         
         .btn-danger {
@@ -183,6 +229,15 @@
         .current-question-display h3 {
             color: #1976d2;
             margin-bottom: 10px;
+        }
+        
+        .url-examples {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9rem;
         }
         
         .images-grid {
@@ -351,6 +406,34 @@
             border-left: 4px solid #17a2b8;
         }
         
+        .participant-list {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .participant-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .participant-item:hover {
+            background: #f0f8ff;
+        }
+        
+        .participant-item.active {
+            background: #e3f2fd;
+            font-weight: 600;
+        }
+        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -379,8 +462,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📊 Multi-Question Image Feedback System</h1>
-            <p>Upload all images once - system randomly selects 20 images per question</p>
+            <h1>📊 Multi-Participant Image Feedback System</h1>
+            <p>Each participant has their own unique image pool and data</p>
+        </div>
+        
+        <div class="participant-info" id="participantInfo">
+            Current Participant: <span id="currentParticipantDisplay">No participant selected</span>
         </div>
         
         <!-- Admin Section -->
@@ -391,14 +478,27 @@
             </div>
             
             <div id="adminContent">
+                <div class="participant-selector">
+                    <h4>👤 Participant Management</h4>
+                    <input type="text" 
+                           class="participant-input" 
+                           id="participantIdInput" 
+                           placeholder="Enter Participant ID (e.g., P001, USER123, etc.)"
+                           value="">
+                    <button class="btn" onclick="selectParticipant()">🔄 Switch to Participant</button>
+                    <button class="btn btn-secondary" onclick="createNewParticipant()">➕ Create New Participant</button>
+                    
+                    <div class="participant-list" id="participantList"></div>
+                </div>
+                
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
-                    <h3>Upload ALL images to the pool</h3>
-                    <p>The system will randomly select 20 images per question</p>
+                    <h3 id="uploadTitle">Select a participant first to upload images</h3>
+                    <p id="uploadDesc">Each participant will have their own unique set of 20 randomly selected images per question</p>
                     <p>Supports JPG, PNG, GIF (max 5MB per file)</p>
-                    <input type="file" id="fileInput" class="file-input" multiple accept="image/*">
+                    <input type="file" id="fileInput" class="file-input" multiple accept="image/*" disabled>
                     <br><br>
-                    <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    <button class="btn" id="uploadBtn" onclick="handleUploadClick()" disabled>
                         📤 Select Images
                     </button>
                 </div>
@@ -409,35 +509,30 @@
                     <input type="text" 
                            class="question-input" 
                            id="questionInput" 
-                           placeholder="Enter question text">
-                    <button class="btn" onclick="saveCurrentQuestion()">💾 Save Question</button>
+                           placeholder="Enter question text"
+                           disabled>
+                    <button class="btn" onclick="saveCurrentQuestion()" id="saveQuestionBtn" disabled>💾 Save Question</button>
                 </div>
                 
                 <div style="margin-top: 20px; text-align: center;">
-                    <button class="btn btn-danger" onclick="clearAllData()">🗑️ Clear All Data</button>
-                    <button class="btn" onclick="exportData()">💾 Export Data</button>
-                    <button class="btn btn-secondary" onclick="regenerateRandomImages()">🎲 New Random Selection</button>
+                    <button class="btn btn-danger" onclick="clearParticipantData()" id="clearBtn" disabled>🗑️ Clear Participant Data</button>
+                    <button class="btn" onclick="exportData()" id="exportBtn" disabled>💾 Export Data</button>
+                    <button class="btn btn-secondary" onclick="regenerateRandomImages()" id="randomBtn" disabled>🎲 New Random Selection</button>
                 </div>
                 
                 <div class="status-message" id="statusMessage"></div>
                 <div class="random-info">
-                    <strong>ℹ️ Info:</strong> Total pool: <span id="totalPoolImages">0</span> images. 
+                    <strong>ℹ️ Current Participant Info:</strong><br>
+                    Participant ID: <span id="currentParticipantId">None selected</span><br>
+                    Total images: <span id="totalPoolImages">0</span><br>
                     Each question displays 20 randomly selected images.
                 </div>
                 
                 <div class="deployment-guide">
-                    <h4>🚀 Ready to Deploy!</h4>
-                    <p><strong>Next Steps:</strong></p>
-                    <ol>
-                        <li>Download this HTML file (right-click → Save As)</li>
-                        <li>Upload to a free hosting service like:</li>
-                        <ul>
-                            <li><strong>GitHub Pages</strong> (recommended - free, easy)</li>
-                            <li><strong>Netlify</strong> (drag & drop)</li>
-                            <li><strong>Vercel</strong> (fast deployment)</li>
-                        </ul>
-                        <li>Use the URLs in Qualtrics: <code>your-site.com?question=1</code>, <code>your-site.com?question=2</code>, etc.</li>
-                    </ol>
+                    <h4>🚀 Qualtrics Integration URLs</h4>
+                    <div class="url-examples" id="urlExamples">
+                        Select a participant to see their specific URLs...
+                    </div>
                 </div>
             </div>
         </div>
@@ -446,17 +541,17 @@
         <div class="viewer-section">
             <div class="current-question-display">
                 <h3>Current Question:</h3>
-                <div id="currentQuestionText">No question selected</div>
+                <div id="currentQuestionText">No participant or question selected</div>
                 <div style="margin-top: 10px;">
-                    <strong>URL Parameter:</strong> <code id="urlParam">?question=1</code>
-                    <button class="btn" onclick="copyURL()" style="margin-left: 10px; padding: 5px 15px; font-size: 0.9rem;">📋 Copy URL</button>
+                    <strong>Current URL:</strong> <code id="currentURL">Select participant first</code>
+                    <button class="btn" onclick="copyURL()" style="margin-left: 10px; padding: 5px 15px; font-size: 0.9rem;" id="copyBtn" disabled>📋 Copy URL</button>
                 </div>
             </div>
             
             <div id="imagesGrid" class="images-grid"></div>
             
             <div class="results-section">
-                <h3 class="results-title">📈 Results for Current Question</h3>
+                <h3 class="results-title">📈 Results for Current Participant & Question</h3>
                 
                 <div class="stats-grid">
                     <div class="stat-card">
@@ -464,7 +559,7 @@
                         <div class="stat-label">Total Clicks</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="displayedImages">20</div>
+                        <div class="stat-number" id="displayedImages">0</div>
                         <div class="stat-label">Images Shown</div>
                     </div>
                     <div class="stat-card">
@@ -483,17 +578,20 @@
     </div>
 
     <script>
-        // Application state management
+        // Global application state
         let appData = {
-            allImages: [], // Complete image pool
-            questions: {
-                1: { text: "Which of these images strikes you the most?", selectedImages: [], clicks: {} },
-                2: { text: "Which of these images would you like to click on?", selectedImages: [], clicks: {} },
-                3: { text: "Which image best represents your interest?", selectedImages: [], clicks: {} },
-                4: { text: "Which of these images do you prefer?", selectedImages: [], clicks: {} },
-                5: { text: "Which image best captures your attention?", selectedImages: [], clicks: {} }
-            },
+            participants: {}, // Each participant has their own data structure
+            currentParticipant: null,
             currentQuestion: 1
+        };
+
+        // Default question structure for new participants
+        const defaultQuestions = {
+            1: { text: "Which of these images strikes you the most?", selectedImages: [], clicks: {} },
+            2: { text: "Which of these images would you like to click on?", selectedImages: [], clicks: {} },
+            3: { text: "Which image best represents your interest?", selectedImages: [], clicks: {} },
+            4: { text: "Which of these images do you prefer?", selectedImages: [], clicks: {} },
+            5: { text: "Which image best captures your attention?", selectedImages: [], clicks: {} }
         };
 
         // Function to randomize array (Fisher-Yates shuffle)
@@ -506,18 +604,31 @@
             return shuffled;
         }
 
-        // Select 20 random images for each question
+        // Create new participant data structure
+        function createParticipantData(participantId) {
+            return {
+                id: participantId,
+                allImages: [],
+                questions: JSON.parse(JSON.stringify(defaultQuestions)), // Deep copy
+                createdAt: new Date().toISOString()
+            };
+        }
+
+        // Select 20 random images for each question for current participant
         function selectRandomImagesForAllQuestions() {
-            if (appData.allImages.length === 0) return;
+            if (!appData.currentParticipant || !appData.participants[appData.currentParticipant]) return;
             
-            Object.keys(appData.questions).forEach(questionNum => {
-                const shuffled = shuffleArray(appData.allImages);
-                appData.questions[questionNum].selectedImages = shuffled.slice(0, Math.min(20, appData.allImages.length));
+            const participant = appData.participants[appData.currentParticipant];
+            if (participant.allImages.length === 0) return;
+            
+            Object.keys(participant.questions).forEach(questionNum => {
+                const shuffled = shuffleArray(participant.allImages);
+                participant.questions[questionNum].selectedImages = shuffled.slice(0, Math.min(20, participant.allImages.length));
                 
                 // Initialize clicks for newly selected images
-                appData.questions[questionNum].selectedImages.forEach(img => {
-                    if (!appData.questions[questionNum].clicks[img.id]) {
-                        appData.questions[questionNum].clicks[img.id] = 0;
+                participant.questions[questionNum].selectedImages.forEach(img => {
+                    if (!participant.questions[questionNum].clicks[img.id]) {
+                        participant.questions[questionNum].clicks[img.id] = 0;
                     }
                 });
             });
@@ -525,37 +636,200 @@
 
         // Load saved data
         function loadData() {
-            const saved = localStorage.getItem('multiQuestionFeedbackData');
+            const saved = localStorage.getItem('multiParticipantFeedbackData');
             if (saved) {
                 appData = { ...appData, ...JSON.parse(saved) };
             }
             
-            // Get current question from URL
+            // Get participant and question from URL
             const urlParams = new URLSearchParams(window.location.search);
+            const participantParam = urlParams.get('participant');
             const questionParam = urlParams.get('question');
-            if (questionParam && appData.questions[questionParam]) {
+            
+            if (participantParam) {
+                // Create participant if doesn't exist
+                if (!appData.participants[participantParam]) {
+                    appData.participants[participantParam] = createParticipantData(participantParam);
+                }
+                appData.currentParticipant = participantParam;
+                document.getElementById('participantIdInput').value = participantParam;
+            }
+            
+            if (questionParam && questionParam >= 1 && questionParam <= 5) {
                 appData.currentQuestion = parseInt(questionParam);
             }
             
-            renderQuestionTabs();
-            renderCurrentQuestion();
-            renderImages();
-            updateStats();
+            updateUI();
         }
 
         // Save data
         function saveData() {
-            localStorage.setItem('multiQuestionFeedbackData', JSON.stringify(appData));
+            localStorage.setItem('multiParticipantFeedbackData', JSON.stringify(appData));
+        }
+
+        // Update entire UI
+        function updateUI() {
+            renderParticipantList();
+            renderQuestionTabs();
+            renderCurrentQuestion();
+            renderImages();
+            updateStats();
+            updateParticipantInfo();
+            updateURLExamples();
+            updateButtonStates();
+        }
+
+        // Update button states based on participant selection
+        function updateButtonStates() {
+            const hasParticipant = appData.currentParticipant !== null;
+            
+            document.getElementById('fileInput').disabled = !hasParticipant;
+            document.getElementById('uploadBtn').disabled = !hasParticipant;
+            document.getElementById('questionInput').disabled = !hasParticipant;
+            document.getElementById('saveQuestionBtn').disabled = !hasParticipant;
+            document.getElementById('clearBtn').disabled = !hasParticipant;
+            document.getElementById('exportBtn').disabled = !hasParticipant;
+            document.getElementById('randomBtn').disabled = !hasParticipant;
+            document.getElementById('copyBtn').disabled = !hasParticipant;
+            
+            const uploadArea = document.getElementById('uploadArea');
+            if (hasParticipant) {
+                uploadArea.classList.remove('disabled');
+                document.getElementById('uploadTitle').textContent = `Upload images for ${appData.currentParticipant}`;
+                document.getElementById('uploadDesc').textContent = `Images will be randomly assigned to this participant's questions`;
+            } else {
+                uploadArea.classList.add('disabled');
+                document.getElementById('uploadTitle').textContent = "Select a participant first to upload images";
+                document.getElementById('uploadDesc').textContent = "Each participant will have their own unique set of images";
+            }
+        }
+
+        // Render participant list
+        function renderParticipantList() {
+            const listContainer = document.getElementById('participantList');
+            listContainer.innerHTML = '';
+            
+            if (Object.keys(appData.participants).length === 0) {
+                listContainer.innerHTML = '<p style="text-align: center; color: #666;">No participants created yet</p>';
+                return;
+            }
+            
+            Object.keys(appData.participants).forEach(participantId => {
+                const item = document.createElement('div');
+                item.className = `participant-item ${participantId === appData.currentParticipant ? 'active' : ''}`;
+                item.onclick = () => switchToParticipant(participantId);
+                
+                const participant = appData.participants[participantId];
+                item.innerHTML = `
+                    <span>${participantId}</span>
+                    <span style="font-size: 0.9rem; color: #666;">${participant.allImages.length} images</span>
+                `;
+                
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Switch to participant
+        function switchToParticipant(participantId) {
+            appData.currentParticipant = participantId;
+            document.getElementById('participantIdInput').value = participantId;
+            updateUI();
+            saveData();
+            
+            // Update URL without reload
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('participant', participantId);
+            newUrl.searchParams.set('question', appData.currentQuestion);
+            window.history.replaceState({}, '', newUrl);
+        }
+
+        // Select participant from input
+        function selectParticipant() {
+            const participantId = document.getElementById('participantIdInput').value.trim();
+            if (!participantId) {
+                showMessage('Please enter a participant ID', 'error');
+                return;
+            }
+            
+            // Create participant if doesn't exist
+            if (!appData.participants[participantId]) {
+                appData.participants[participantId] = createParticipantData(participantId);
+                showMessage(`New participant ${participantId} created!`, 'success');
+            }
+            
+            switchToParticipant(participantId);
+        }
+
+        // Create new participant with auto-generated ID
+        function createNewParticipant() {
+            const timestamp = Date.now().toString().slice(-6);
+            const participantId = `P${timestamp}`;
+            
+            appData.participants[participantId] = createParticipantData(participantId);
+            document.getElementById('participantIdInput').value = participantId;
+            switchToParticipant(participantId);
+            showMessage(`New participant ${participantId} created!`, 'success');
+        }
+
+        // Update participant info display
+        function updateParticipantInfo() {
+            const currentDisplay = document.getElementById('currentParticipantDisplay');
+            const currentIdDisplay = document.getElementById('currentParticipantId');
+            const totalImagesDisplay = document.getElementById('totalPoolImages');
+            
+            if (appData.currentParticipant) {
+                const participant = appData.participants[appData.currentParticipant];
+                currentDisplay.textContent = appData.currentParticipant;
+                currentIdDisplay.textContent = appData.currentParticipant;
+                totalImagesDisplay.textContent = participant.allImages.length;
+            } else {
+                currentDisplay.textContent = 'No participant selected';
+                currentIdDisplay.textContent = 'None selected';
+                totalImagesDisplay.textContent = '0';
+            }
+        }
+
+        // Update URL examples
+        function updateURLExamples() {
+            const examplesDiv = document.getElementById('urlExamples');
+            if (!appData.currentParticipant) {
+                examplesDiv.textContent = 'Select a participant to see their specific URLs...';
+                return;
+            }
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const participantId = appData.currentParticipant;
+            
+            examplesDiv.innerHTML = `
+<strong>URLs for participant ${participantId}:</strong>
+Question 1: ${baseUrl}?participant=${participantId}&question=1
+Question 2: ${baseUrl}?participant=${participantId}&question=2
+Question 3: ${baseUrl}?participant=${participantId}&question=3
+Question 4: ${baseUrl}?participant=${participantId}&question=4
+Question 5: ${baseUrl}?participant=${participantId}&question=5
+
+<strong>Use these URLs in your Qualtrics survey for this participant.</strong>
+            `;
         }
 
         // File upload handling
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
 
-        uploadArea.addEventListener('click', () => fileInput.click());
+        function handleUploadClick() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            fileInput.click();
+        }
+
+        uploadArea.addEventListener('click', handleUploadClick);
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('dragover');
+            if (appData.currentParticipant) {
+                uploadArea.classList.add('dragover');
+            }
         });
         uploadArea.addEventListener('dragleave', () => {
             uploadArea.classList.remove('dragover');
@@ -563,7 +837,9 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            handleFiles(e.dataTransfer.files);
+            if (appData.currentParticipant) {
+                handleFiles(e.dataTransfer.files);
+            }
         });
 
         fileInput.addEventListener('change', (e) => {
@@ -571,6 +847,13 @@
         });
 
         function handleFiles(files) {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            
             Array.from(files).forEach(file => {
                 if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
                     const reader = new FileReader();
@@ -582,14 +865,12 @@
                             uploadTime: new Date().toISOString()
                         };
                         
-                        appData.allImages.push(imageData);
+                        participant.allImages.push(imageData);
                         selectRandomImagesForAllQuestions();
                         
                         saveData();
-                        renderImages();
-                        updateStats();
-                        updateTotalPoolDisplay();
-                        showMessage(`Image ${file.name} uploaded! Total pool: ${appData.allImages.length}`, 'success');
+                        updateUI();
+                        showMessage(`Image ${file.name} uploaded for ${appData.currentParticipant}!`, 'success');
                     };
                     reader.readAsDataURL(file);
                 } else {
@@ -603,7 +884,9 @@
             const tabsContainer = document.getElementById('questionTabs');
             tabsContainer.innerHTML = '';
             
-            Object.keys(appData.questions).forEach(questionNum => {
+            if (!appData.currentParticipant) return;
+            
+            [1, 2, 3, 4, 5].forEach(questionNum => {
                 const tab = document.createElement('button');
                 tab.className = `question-tab ${questionNum == appData.currentQuestion ? 'active' : ''}`;
                 tab.textContent = `Question ${questionNum}`;
@@ -615,29 +898,51 @@
         // Select current question
         function selectQuestion(questionNum) {
             appData.currentQuestion = parseInt(questionNum);
-            renderQuestionTabs();
-            renderCurrentQuestion();
-            renderImages();
-            updateStats();
+            updateUI();
             
             // Update URL without reload
-            const newUrl = new URL(window.location);
-            newUrl.searchParams.set('question', questionNum);
-            window.history.replaceState({}, '', newUrl);
+            if (appData.currentParticipant) {
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('participant', appData.currentParticipant);
+                newUrl.searchParams.set('question', questionNum);
+                window.history.replaceState({}, '', newUrl);
+            }
         }
 
         // Render current question
         function renderCurrentQuestion() {
-            const questionText = appData.questions[appData.currentQuestion].text;
-            document.getElementById('currentQuestionText').textContent = questionText;
-            document.getElementById('questionInput').value = questionText;
-            document.getElementById('urlParam').textContent = `?question=${appData.currentQuestion}`;
+            const currentURLDisplay = document.getElementById('currentURL');
+            const questionTextDisplay = document.getElementById('currentQuestionText');
+            const questionInput = document.getElementById('questionInput');
+            
+            if (!appData.currentParticipant) {
+                questionTextDisplay.textContent = 'No participant selected';
+                currentURLDisplay.textContent = 'Select participant first';
+                questionInput.value = '';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const questionText = participant.questions[appData.currentQuestion].text;
+            
+            questionTextDisplay.textContent = questionText;
+            questionInput.value = questionText;
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            currentURLDisplay.textContent = `${baseUrl}?participant=${appData.currentParticipant}&question=${appData.currentQuestion}`;
         }
 
         // Save current question
         function saveCurrentQuestion() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
             const newText = document.getElementById('questionInput').value;
-            appData.questions[appData.currentQuestion].text = newText;
+            const participant = appData.participants[appData.currentParticipant];
+            participant.questions[appData.currentQuestion].text = newText;
+            
             renderCurrentQuestion();
             saveData();
             showMessage('Question saved!', 'success');
@@ -646,11 +951,18 @@
         // Render images for current question
         function renderImages() {
             const grid = document.getElementById('imagesGrid');
-            const currentQ = appData.questions[appData.currentQuestion];
             grid.innerHTML = '';
             
+            if (!appData.currentParticipant) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; font-size: 1.2rem;">Select a participant to view their images</p>';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
+            
             if (currentQ.selectedImages.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: #666; font-size: 1.2rem;">Upload some images to the pool to get started</p>';
+                grid.innerHTML = `<p style="text-align: center; color: #666; font-size: 1.2rem;">Upload images for participant ${appData.currentParticipant} to get started</p>`;
                 return;
             }
             
@@ -675,7 +987,10 @@
 
         // Record click
         function recordClick(imageId) {
-            const currentQ = appData.questions[appData.currentQuestion];
+            if (!appData.currentParticipant) return;
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
             currentQ.clicks[imageId] = (currentQ.clicks[imageId] || 0) + 1;
             
             // Visual effect
@@ -700,7 +1015,15 @@
 
         // Update statistics
         function updateStats() {
-            const currentQ = appData.questions[appData.currentQuestion];
+            if (!appData.currentParticipant) {
+                document.getElementById('totalClicks').textContent = '0';
+                document.getElementById('displayedImages').textContent = '0';
+                document.getElementById('mostPopular').textContent = '-';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
             const totalClicks = Object.values(currentQ.clicks).reduce((sum, count) => sum + count, 0);
             const displayedImages = currentQ.selectedImages.length;
             
@@ -717,15 +1040,17 @@
             document.getElementById('mostPopular').textContent = mostPopular;
         }
 
-        // Update total pool display
-        function updateTotalPoolDisplay() {
-            document.getElementById('totalPoolImages').textContent = appData.allImages.length;
-        }
-
         // Update detailed results
         function updateResults() {
-            const currentQ = appData.questions[appData.currentQuestion];
+            if (!appData.currentParticipant) {
+                document.getElementById('resultsData').textContent = 'No participant selected';
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
             const results = {
+                participantId: appData.currentParticipant,
                 question: currentQ.text,
                 questionNumber: appData.currentQuestion,
                 timestamp: new Date().toISOString(),
@@ -751,32 +1076,32 @@
             setTimeout(() => message.style.display = 'none', 3000);
         }
 
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all image pool and data?')) {
-                appData = {
-                    allImages: [],
-                    questions: {
-                        1: { text: "Which of these images strikes you the most?", selectedImages: [], clicks: {} },
-                        2: { text: "Which of these images would you like to click on?", selectedImages: [], clicks: {} },
-                        3: { text: "Which image best represents your interest?", selectedImages: [], clicks: {} },
-                        4: { text: "Which of these images do you prefer?", selectedImages: [], clicks: {} },
-                        5: { text: "Which image best captures your attention?", selectedImages: [], clicks: {} }
-                    },
-                    currentQuestion: 1
-                };
-                localStorage.removeItem('multiQuestionFeedbackData');
-                renderQuestionTabs();
-                renderCurrentQuestion();
-                renderImages();
-                updateStats();
-                updateTotalPoolDisplay();
-                showMessage('All data has been cleared', 'success');
+        function clearParticipantData() {
+            if (!appData.currentParticipant) {
+                showMessage('No participant selected', 'error');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to clear all data for participant ${appData.currentParticipant}?`)) {
+                delete appData.participants[appData.currentParticipant];
+                appData.currentParticipant = null;
+                document.getElementById('participantIdInput').value = '';
+                
+                saveData();
+                updateUI();
+                showMessage('Participant data cleared', 'success');
             }
         }
 
         function regenerateRandomImages() {
-            if (appData.allImages.length === 0) {
-                showMessage('Upload some images to the pool first', 'error');
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
+            if (participant.allImages.length === 0) {
+                showMessage('Upload some images for this participant first', 'error');
                 return;
             }
             
@@ -784,17 +1109,24 @@
             renderImages();
             updateStats();
             saveData();
-            showMessage('New random selection generated for all questions!', 'success');
+            showMessage(`New random selection generated for ${appData.currentParticipant}!`, 'success');
         }
 
         function exportData() {
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const participant = appData.participants[appData.currentParticipant];
             const exportData = {
-                ...appData,
+                participantId: appData.currentParticipant,
+                participantData: participant,
                 exportTime: new Date().toISOString(),
                 summary: {
-                    totalImages: appData.allImages.length,
-                    totalQuestions: Object.keys(appData.questions).length,
-                    totalClicksAllQuestions: Object.values(appData.questions).reduce((total, q) => 
+                    totalImages: participant.allImages.length,
+                    totalQuestions: Object.keys(participant.questions).length,
+                    totalClicksAllQuestions: Object.values(participant.questions).reduce((total, q) => 
                         total + Object.values(q.clicks).reduce((sum, count) => sum + count, 0), 0)
                 }
             };
@@ -804,13 +1136,20 @@
             const url = URL.createObjectURL(dataBlob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `multi-question-feedback-${new Date().toISOString().split('T')[0]}.json`;
+            link.download = `participant-${appData.currentParticipant}-feedback-${new Date().toISOString().split('T')[0]}.json`;
             link.click();
             URL.revokeObjectURL(url);
         }
 
         function copyURL() {
-            const url = window.location.origin + window.location.pathname + `?question=${appData.currentQuestion}`;
+            if (!appData.currentParticipant) {
+                showMessage('Please select a participant first', 'error');
+                return;
+            }
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const url = `${baseUrl}?participant=${appData.currentParticipant}&question=${appData.currentQuestion}`;
+            
             navigator.clipboard.writeText(url).then(() => {
                 showMessage('URL copied to clipboard!', 'success');
             });
@@ -833,12 +1172,17 @@
 
         // Qualtrics integration
         function sendToQualtrics(imageId) {
-            const currentQ = appData.questions[appData.currentQuestion];
+            if (!appData.currentParticipant) return;
+            
+            const participant = appData.participants[appData.currentParticipant];
+            const currentQ = participant.questions[appData.currentQuestion];
             const image = currentQ.selectedImages.find(img => img.id === imageId);
+            
             if (image && window.parent && window.parent.postMessage) {
                 window.parent.postMessage({
                     type: 'imageClick',
                     data: {
+                        participantId: appData.currentParticipant,
                         questionNumber: appData.currentQuestion,
                         questionText: currentQ.text,
                         imageId: imageId,
@@ -854,7 +1198,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadData();
             updateResults();
-            updateTotalPoolDisplay();
         });
     </script>
 </body>
