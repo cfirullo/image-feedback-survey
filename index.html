@@ -860,30 +860,128 @@ Question 5: ${baseUrl}?participant=${participantId}&question=5
             }
             
             const participant = appData.participants[appData.currentParticipant];
+            const fileArray = Array.from(files);
+            const validFiles = fileArray.filter(file => 
+                file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024
+            );
             
-            Array.from(files).forEach(file => {
-                if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const imageData = {
-                            id: Date.now() + Math.random(),
-                            name: file.name,
-                            data: e.target.result,
-                            uploadTime: new Date().toISOString()
-                        };
-                        
-                        participant.allImages.push(imageData);
+            if (validFiles.length === 0) {
+                showMessage('No valid images found (JPG, PNG, GIF under 5MB)', 'error');
+                return;
+            }
+            
+            if (validFiles.length !== fileArray.length) {
+                showMessage(`${fileArray.length - validFiles.length} files skipped (too large or invalid format)`, 'error');
+            }
+            
+            // Process files in batches to avoid memory issues
+            processBatchUpload(validFiles, participant);
+        }
+
+        // Process files in batches of 10
+        function processBatchUpload(files, participant) {
+            const batchSize = 10;
+            let currentBatch = 0;
+            const totalBatches = Math.ceil(files.length / batchSize);
+            let totalProcessed = 0;
+            
+            showMessage(`Starting batch upload: ${files.length} files in ${totalBatches} batches`, 'success');
+            updateUploadProgress(0, files.length);
+            
+            function processBatch() {
+                const startIndex = currentBatch * batchSize;
+                const endIndex = Math.min(startIndex + batchSize, files.length);
+                const batch = files.slice(startIndex, endIndex);
+                
+                const batchPromises = batch.map(file => processImageFile(file, participant));
+                
+                Promise.all(batchPromises).then(results => {
+                    totalProcessed += results.length;
+                    currentBatch++;
+                    
+                    updateUploadProgress(totalProcessed, files.length);
+                    showMessage(`Batch ${currentBatch}/${totalBatches} completed (${totalProcessed}/${files.length} total)`, 'success');
+                    
+                    if (currentBatch < totalBatches) {
+                        // Process next batch after a short delay
+                        setTimeout(processBatch, 500);
+                    } else {
+                        // All batches completed
                         selectRandomImagesForAllQuestions();
-                        
                         saveData();
                         updateUI();
-                        showMessage(`Image ${file.name} uploaded for ${appData.currentParticipant}!`, 'success');
+                        hideUploadProgress();
+                        showMessage(`✅ Upload complete! ${totalProcessed} images uploaded for ${appData.currentParticipant}`, 'success');
+                    }
+                }).catch(error => {
+                    console.error('Batch processing error:', error);
+                    showMessage(`Error in batch ${currentBatch + 1}. Continuing with next batch...`, 'error');
+                    currentBatch++;
+                    if (currentBatch < totalBatches) {
+                        setTimeout(processBatch, 1000);
+                    }
+                });
+            }
+            
+            processBatch();
+        }
+
+        // Process individual image file
+        function processImageFile(file, participant) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageData = {
+                        id: Date.now() + Math.random(),
+                        name: file.name,
+                        data: e.target.result,
+                        uploadTime: new Date().toISOString()
                     };
-                    reader.readAsDataURL(file);
-                } else {
-                    showMessage('Invalid file or too large (max 5MB)', 'error');
-                }
+                    
+                    participant.allImages.push(imageData);
+                    resolve(imageData);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
+        }
+
+        // Update upload progress
+        function updateUploadProgress(current, total) {
+            let progressDiv = document.getElementById('uploadProgress');
+            if (!progressDiv) {
+                progressDiv = document.createElement('div');
+                progressDiv.id = 'uploadProgress';
+                progressDiv.style.cssText = `
+                    background: #e3f2fd;
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin: 15px 0;
+                    border-left: 4px solid #4facfe;
+                `;
+                document.getElementById('adminContent').appendChild(progressDiv);
+            }
+            
+            const percentage = Math.round((current / total) * 100);
+            progressDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span><strong>Upload Progress:</strong> ${current}/${total} images</span>
+                    <span><strong>${percentage}%</strong></span>
+                </div>
+                <div style="background: #ddd; height: 10px; border-radius: 5px; margin-top: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); height: 100%; width: ${percentage}%; transition: width 0.3s ease;"></div>
+                </div>
+            `;
+        }
+
+        // Hide upload progress
+        function hideUploadProgress() {
+            const progressDiv = document.getElementById('uploadProgress');
+            if (progressDiv) {
+                setTimeout(() => {
+                    progressDiv.remove();
+                }, 3000);
+            }
         }
 
         // Render question tabs
