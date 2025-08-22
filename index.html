@@ -504,14 +504,14 @@
                 </div>
                 
                 <div class="question-selector">
-                    <h4>🔧 Question Configuration</h4>
+                    <h4>🔧 Global Question Configuration</h4>
+                    <p style="margin-bottom: 15px; color: #666;">These questions apply to ALL participants</p>
                     <div class="question-tabs" id="questionTabs"></div>
                     <input type="text" 
                            class="question-input" 
                            id="questionInput" 
-                           placeholder="Enter question text"
-                           disabled>
-                    <button class="btn" onclick="saveCurrentQuestion()" id="saveQuestionBtn" disabled>💾 Save Question</button>
+                           placeholder="Enter question text">
+                    <button class="btn" onclick="saveGlobalQuestion()">💾 Save Question (All Participants)</button>
                 </div>
                 
                 <div style="margin-top: 20px; text-align: center;">
@@ -582,17 +582,26 @@
         let appData = {
             participants: {}, // Each participant has their own data structure
             currentParticipant: null,
-            currentQuestion: 1
+            currentQuestion: 1,
+            globalQuestions: {
+                1: "Which of these images strikes you the most?",
+                2: "Which of these images would you like to click on?",
+                3: "Which image best represents your interest?",
+                4: "Which of these images do you prefer?",
+                5: "Which image best captures your attention?"
+            }
         };
 
         // Default question structure for new participants
-        const defaultQuestions = {
-            1: { text: "Which of these images strikes you the most?", selectedImages: [], clicks: {} },
-            2: { text: "Which of these images would you like to click on?", selectedImages: [], clicks: {} },
-            3: { text: "Which image best represents your interest?", selectedImages: [], clicks: {} },
-            4: { text: "Which of these images do you prefer?", selectedImages: [], clicks: {} },
-            5: { text: "Which image best captures your attention?", selectedImages: [], clicks: {} }
-        };
+        function getDefaultQuestions() {
+            return {
+                1: { selectedImages: [], clicks: {} },
+                2: { selectedImages: [], clicks: {} },
+                3: { selectedImages: [], clicks: {} },
+                4: { selectedImages: [], clicks: {} },
+                5: { selectedImages: [], clicks: {} }
+            };
+        }
 
         // Function to randomize array (Fisher-Yates shuffle)
         function shuffleArray(array) {
@@ -609,7 +618,7 @@
             return {
                 id: participantId,
                 allImages: [],
-                questions: JSON.parse(JSON.stringify(defaultQuestions)), // Deep copy
+                questions: getDefaultQuestions(),
                 createdAt: new Date().toISOString()
             };
         }
@@ -685,8 +694,6 @@
             
             document.getElementById('fileInput').disabled = !hasParticipant;
             document.getElementById('uploadBtn').disabled = !hasParticipant;
-            document.getElementById('questionInput').disabled = !hasParticipant;
-            document.getElementById('saveQuestionBtn').disabled = !hasParticipant;
             document.getElementById('clearBtn').disabled = !hasParticipant;
             document.getElementById('exportBtn').disabled = !hasParticipant;
             document.getElementById('randomBtn').disabled = !hasParticipant;
@@ -884,8 +891,6 @@ Question 5: ${baseUrl}?participant=${participantId}&question=5
             const tabsContainer = document.getElementById('questionTabs');
             tabsContainer.innerHTML = '';
             
-            if (!appData.currentParticipant) return;
-            
             [1, 2, 3, 4, 5].forEach(questionNum => {
                 const tab = document.createElement('button');
                 tab.className = `question-tab ${questionNum == appData.currentQuestion ? 'active' : ''}`;
@@ -915,37 +920,28 @@ Question 5: ${baseUrl}?participant=${participantId}&question=5
             const questionTextDisplay = document.getElementById('currentQuestionText');
             const questionInput = document.getElementById('questionInput');
             
-            if (!appData.currentParticipant) {
-                questionTextDisplay.textContent = 'No participant selected';
-                currentURLDisplay.textContent = 'Select participant first';
-                questionInput.value = '';
-                return;
-            }
-            
-            const participant = appData.participants[appData.currentParticipant];
-            const questionText = participant.questions[appData.currentQuestion].text;
-            
+            // Always show global question text
+            const questionText = appData.globalQuestions[appData.currentQuestion];
             questionTextDisplay.textContent = questionText;
             questionInput.value = questionText;
+            
+            if (!appData.currentParticipant) {
+                currentURLDisplay.textContent = 'Select participant first';
+                return;
+            }
             
             const baseUrl = window.location.origin + window.location.pathname;
             currentURLDisplay.textContent = `${baseUrl}?participant=${appData.currentParticipant}&question=${appData.currentQuestion}`;
         }
 
-        // Save current question
-        function saveCurrentQuestion() {
-            if (!appData.currentParticipant) {
-                showMessage('Please select a participant first', 'error');
-                return;
-            }
-            
+        // Save global question (applies to all participants)
+        function saveGlobalQuestion() {
             const newText = document.getElementById('questionInput').value;
-            const participant = appData.participants[appData.currentParticipant];
-            participant.questions[appData.currentQuestion].text = newText;
+            appData.globalQuestions[appData.currentQuestion] = newText;
             
             renderCurrentQuestion();
             saveData();
-            showMessage('Question saved!', 'success');
+            showMessage('Global question saved for all participants!', 'success');
         }
 
         // Render images for current question
@@ -1051,7 +1047,7 @@ Question 5: ${baseUrl}?participant=${participantId}&question=5
             const currentQ = participant.questions[appData.currentQuestion];
             const results = {
                 participantId: appData.currentParticipant,
-                question: currentQ.text,
+                question: appData.globalQuestions[appData.currentQuestion],
                 questionNumber: appData.currentQuestion,
                 timestamp: new Date().toISOString(),
                 totalClicks: Object.values(currentQ.clicks).reduce((sum, count) => sum + count, 0),
@@ -1184,7 +1180,7 @@ Question 5: ${baseUrl}?participant=${participantId}&question=5
                     data: {
                         participantId: appData.currentParticipant,
                         questionNumber: appData.currentQuestion,
-                        questionText: currentQ.text,
+                        questionText: appData.globalQuestions[appData.currentQuestion],
                         imageId: imageId,
                         imageName: image.name,
                         timestamp: new Date().toISOString(),
